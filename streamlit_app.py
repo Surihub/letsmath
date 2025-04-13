@@ -22,20 +22,54 @@ def connect_sheet():
 
 sheet = connect_sheet()
 
-# ✅ 문제 정의
 basic_deriv = [
     ("\\frac{d}{dx}\\left( \\sin x \\right)", "cos x", ["cos x", "-cos x", "sin x", "-sin x"]),
+    ("\\frac{d}{dx}\\left( \\cos x \\right)", "-sin x", ["-sin x", "cos x", "-cos x", "sin x"]),
+    ("\\frac{d}{dx}\\left( \\tan x \\right)", "sec² x", ["sec² x", "sec x", "sin x", "tan x"]),
+    ("\\frac{d}{dx}\\left( \\sec x \\right)", "sec x tan x", ["sec x tan x", "sec x", "tan x", "cos x"]),
     ("\\frac{d}{dx}\\left( \\ln x \\right)", "1/x", ["1/x", "ln x", "x", "x ln x"]),
     ("\\frac{d}{dx}\\left( e^x \\right)", "e^x", ["e^x", "x e^x", "ln x", "1/x"]),
     ("\\frac{d}{dx}\\left( x^5 \\right)", "5x^4", ["5x^4", "4x^5", "x^4", "5x^3"]),
     ("\\frac{d}{dx}\\left( \\sqrt{x} \\right)", "1/(2√x)", ["1/(2√x)", "√x", "1/x", "x²"]),
+    ("\\frac{d}{dx}\\left( \\frac{1}{g(x)} \\right)", "-g'(x)/(g(x))²", ["-g'(x)/(g(x))²", "1/g(x)", "-1/g(x)", "g'(x)/g(x)"]),
+    ("\\frac{d}{dx}\\left( \\frac{f(x)}{g(x)} \\right)", "(f'(x)g(x) - f(x)g'(x)) / (g(x))²", [
+        "(f'(x)g(x) - f(x)g'(x)) / (g(x))²",
+        "(f'(x)g(x) + f(x)g'(x)) / (g(x))²",
+        "(f(x)g(x))' / (g(x))²",
+        "(f(x)/g(x))'"
+    ]),
 ]
 applied_deriv = [
-    ("y = (3x² - 4x + 1)^5", "연쇄법칙", ["연쇄법칙", "곱의 법칙", "역함수 미분", "합의 법칙"]),
-    ("x = t² + 1, y = t³ - t ⇒ dy/dx ?", "dy/dt ÷ dx/dt", ["dy/dt ÷ dx/dt", "dy * dx", "dy - dx", "dx/dt ÷ dy/dt"]),
-    ("x² + y² = 25 ⇒ dy/dx ?", "-x/y", ["-x/y", "x/y", "2x + 2y", "1"]),
-    ("y = √[3]{x+2}", "연쇄법칙 or 일반 미분", ["연쇄법칙", "역함수 미분", "적분", "상수함수"]),
-    ("y = sin(2x² + 1)", "cos(u)·du/dx", ["cos(u)·du/dx", "sin(u)·du/dx", "cos x", "tan u"]),
+    ("y = (3x^2 - 4x + 1)^5", "\\frac{d}{dx}[(3x^2 - 4x + 1)^5] = 5(3x^2 - 4x + 1)^4 · (6x - 4)", [
+        "5(3x^2 - 4x + 1)^4 · (6x - 4)",
+        "5(3x^2 - 4x + 1)^5",
+        "(3x^2 - 4x + 1)^4",
+        "6x - 4"
+    ]),
+    ("y = \\sin(2x^2 + 1)", "\\cos(2x^2 + 1) · 4x", [
+        "\\cos(2x^2 + 1) · 4x",
+        "\\sin(2x^2 + 1) · 4x",
+        "2x · \\cos(x)",
+        "\\tan(2x^2 + 1)"
+    ]),
+    ("y = \\sqrt[3]{x+2}", "\\frac{1}{3\\sqrt[3]{(x+2)^2}}", [
+        "\\frac{1}{3\\sqrt[3]{(x+2)^2}}",
+        "\\frac{1}{2\\sqrt{x+2}}",
+        "\\sqrt[3]{x+2}",
+        "\\frac{d}{dx}(x+2)"
+    ]),
+    ("x = t^2 + 1, y = t^3 - t \\Rightarrow \\frac{dy}{dx} = ?", "\\frac{dy/dt}{dx/dt} = \\frac{3t^2 - 1}{2t}", [
+        "\\frac{3t^2 - 1}{2t}",
+        "3t^2 - 1",
+        "2t",
+        "\\frac{2t}{3t^2 - 1}"
+    ]),
+    ("x^2 + y^2 = 25 \\Rightarrow \\frac{dy}{dx} = ?", "-\\frac{x}{y}", [
+        "-\\frac{x}{y}",
+        "\\frac{x}{y}",
+        "2x + 2y",
+        "1"
+    ]),
 ]
 
 # ✅ 세션 초기화
@@ -98,10 +132,16 @@ with st.sidebar:
         st.rerun()
 
 # ✅ 문제 셔플
+# if st.session_state.questions is None:
+#     all_questions = basic_deriv + applied_deriv
+#     random.shuffle(all_questions)
+#     st.session_state.questions = all_questions
+# ✅ 문제 셔플 (10문제 중 무작위 5개 추출)
 if st.session_state.questions is None:
     all_questions = basic_deriv + applied_deriv
     random.shuffle(all_questions)
-    st.session_state.questions = all_questions
+    st.session_state.questions = random.sample(all_questions, 5)
+
 
 questions = st.session_state.questions
 
