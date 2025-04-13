@@ -106,7 +106,10 @@ if st.session_state.current_q < len(questions):
 
     # 정오답 피드백
     if st.session_state.feedback:
-        st.markdown(st.session_state.feedback)
+        if st.session_state.feedback["is_correct"]:
+            st.success(st.session_state.feedback["message"])
+        else:
+            st.error(st.session_state.feedback["message"])
 
     # 다음 문제 버튼
     if selected is not None:
@@ -117,14 +120,21 @@ if st.session_state.current_q < len(questions):
 
             if selected == q[1]:
                 st.session_state.score += 1
-                st.session_state.feedback = "✅ 정답입니다!"
+                st.session_state.feedback = {
+                    "is_correct": True,
+                    "message": "✅ 정답입니다!"
+                }
             else:
-                st.session_state.feedback = f"❌ 틀렸습니다. 정답은: **{q[1]}**"
+                st.session_state.feedback = {
+                    "is_correct": False,
+                    "message": f"❌ 틀렸습니다. 정답은: **{q[1]}**"
+                }
 
             # 다음 문제 준비
             st.session_state.current_q += 1
             st.session_state.question_start_time = None
             st.rerun()
+
 
 # 게임 완료
 else:
