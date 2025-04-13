@@ -8,6 +8,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from pytz import timezone
 import json
 import os
+import numpy as np
 
 # ✅ 구글 시트 연결
 @st.cache_resource
@@ -186,6 +187,7 @@ if st.session_state.current_q < len(questions):
 # ✅ 게임 종료
 else:
     total_elapsed = sum(st.session_state.times)
+    st.subheader(f"{st.session_state.nickname}님의 풀이 결과")
     st.success(f"🎉 게임 완료! 총 점수: {st.session_state.score} / {len(questions)}")
     st.info(f"🕒 총 소요 시간: {total_elapsed:.2f}초 (풀이 시간만 측정)")
 
@@ -203,14 +205,46 @@ else:
     df_best = df.sort_values(by=['점수', '걸린시간'], ascending=[False, True])
     df_best = df_best.groupby('닉네임', as_index=False).first()
     ranking = df_best.sort_values(by=['점수', '걸린시간'], ascending=[False, True]).head(10)
+    st.markdown("## 🏆 랭킹 Top 10")
+    st.markdown("**상위 랭커들을 소개합니다!**")
 
-    st.subheader("🏆 랭킹 Top 10")
-    st.dataframe(ranking)
+    # 랭킹 가져오기
+    df = pd.DataFrame(sheet.get_all_records())
+    df['걸린시간'] = pd.to_numeric(df['걸린시간'], errors='coerce')
+
+    # 기록일 컬럼 존재 여부 체크 및 정렬
+    if "기록시간" in df.columns:
+        df['기록일'] = df['기록시간']
+    else:
+        df['기록일'] = ""
+
+    df_best = df.sort_values(by=['점수', '걸린시간'], ascending=[False, True])
+    df_best = df_best.groupby('닉네임', as_index=False).first()
+    ranking = df_best.sort_values(by=['점수', '걸린시간'], ascending=[False, True]).head(10)
+
+    # 이모지 순위
+    rank_emojis = ["🥇", "🥈", "🥉"] + [f"{i+1}위" for i in range(3, 10)]
+
+    # 스타일링된 테이블 생성
+    styled_ranking = []
+    for i, row in ranking.reset_index(drop=True).iterrows():
+        styled_ranking.append({
+            "순위": rank_emojis[i],
+            "닉네임": f"**{row['닉네임']}**",
+            "점수": f"{row['점수']}/10",
+            "풀이시간": f"⏱ {row['걸린시간']}초",
+            "기록일": row["기록일"]
+        })
+
+    # 예쁘게 보여주기
+    st.table(pd.DataFrame(styled_ranking))
+    st.success(f"현재까지 {df['닉네임'].nunique()}명이 총 {len(df['닉네임'])}회 도전했어요. 평균 시도 횟수: {np.round(len(df['닉네임'])/df['닉네임'].nunique(),2)}")
 
     if st.button("🔄 다시 시작하기"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
+
 
 # ✅ 제작자 정보 하단 고정
 st.markdown("""
