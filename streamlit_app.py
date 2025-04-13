@@ -7,6 +7,7 @@ import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 from pytz import timezone
 import json
+import os
 
 # ✅ 구글 시트 연결
 @st.cache_resource
@@ -18,6 +19,8 @@ def connect_sheet():
     client = gspread.authorize(creds)
     sheet = client.open_by_key(sheet_id).sheet1
     return sheet
+
+sheet = connect_sheet()
 
 # ✅ 문제 정의
 basic_deriv = [
@@ -35,9 +38,10 @@ applied_deriv = [
     ("y = sin(2x² + 1)", "cos(u)·du/dx", ["cos(u)·du/dx", "sin(u)·du/dx", "cos x", "tan u"]),
 ]
 
-# ✅ 세션 상태 초기화
+# ✅ 세션 초기화
 defaults = {
     "nickname": None,
+    "game_started": False,
     "current_q": 0,
     "score": 0,
     "questions": None,
@@ -49,49 +53,49 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-sheet = connect_sheet()
-import os
-import random
-
-# 🎉 앱 제목
-st.title("🧠 미분법 공식 암기 게임")
-
-# 🖼️ 랜덤 짤 표시
+# ✅ 랜덤 짤 출력
 def show_random_image():
     image_folder = ".streamlit/images"
     supported_formats = (".jpg", ".jpeg", ".png", ".gif")
-
     images = [f for f in os.listdir(image_folder) if f.lower().endswith(supported_formats)]
     if images:
         selected = random.choice(images)
-        st.image(os.path.join(image_folder, selected), width=500)
+        st.image(os.path.join(image_folder, selected), use_container_width=True)
 
-# 👋 간단한 설명
-st.info("문제를 풀면서 미분 공식을 재미있게 익혀보세요!")
+# ✅ 대문 페이지 (닉네임 입력 + 게임 시작)
+if not st.session_state.nickname or not st.session_state.game_started:
+    st.title("🧠 미분법 공식 암기 게임")
+    st.info("문제를 풀면서 미분 공식을 재미있게 익혀보세요!")
 
-# 👤 닉네임 입력
-st.subheader("닉네임 입력")
-nickname = st.text_input("닉네임을 입력하세요 (최대 3자)", max_chars=3)
-
-if nickname and len(nickname) <= 3:
-    st.session_state.nickname = nickname
-    st.rerun()
     show_random_image()
 
-elif nickname:
-    st.error("닉네임은 3자 이하로 입력해주세요.")
-st.stop()
+    st.subheader("👤 닉네임 입력")
+    nickname = st.text_input("닉네임을 입력하세요 (최대 3자)", max_chars=3)
 
+    if nickname:
+        if len(nickname) > 3:
+            st.error("닉네임은 3자 이하로 입력해주세요.")
+        else:
+            if st.button("🚀 게임 시작하기"):
+                st.session_state.nickname = nickname
+                st.session_state.game_started = True
 
+                # 준비 메세지 출력
+                with st.spinner("🎯 준비되셨나요? 게임을 시작합니다!"):
+                    st.warning("⚠️ 한 번 제출한 정답은 변경할 수 없습니다!")
+                    for i in reversed(range(1, 4)):
+                        st.info(f"⏳ {i}...")
+                        time.sleep(1)
+                st.rerun()
+    st.stop()
 
-
-# # ✅ 닉네임 변경
-# with st.sidebar:
-#     st.write(f"👋 안녕하세요, **{st.session_state.nickname}** 님!")
-#     if st.button("🔁 닉네임 변경하기"):
-#         for key in list(st.session_state.keys()):
-#             del st.session_state[key]
-#         st.rerun()
+# ✅ 닉네임 변경 (사이드바)
+with st.sidebar:
+    st.write(f"👋 안녕하세요, **{st.session_state.nickname}** 님!")
+    if st.button("🔁 닉네임 변경하기"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
 # ✅ 문제 셔플
 if st.session_state.questions is None:
@@ -110,11 +114,9 @@ if st.session_state.current_q < len(questions):
     st.progress(q_num / len(questions))
     st.latex(q[0])
 
-    # 시간 기록 시작
     if st.session_state.question_start_time is None:
         st.session_state.question_start_time = time.time()
 
-    # 보기 선택
     selected = st.radio(
         "정답을 고르세요:",
         q[2],
@@ -123,7 +125,6 @@ if st.session_state.current_q < len(questions):
         disabled=st.session_state.answered
     )
 
-    # 선택되면 채점
     if selected is not None and not st.session_state.answered:
         st.session_state.answered = True
         elapsed = time.time() - st.session_state.question_start_time
@@ -135,7 +136,6 @@ if st.session_state.current_q < len(questions):
         else:
             st.error(f"❌ 틀렸습니다. 정답은: **{q[1]}**")
 
-    # 다음 문제 버튼
     if st.session_state.answered:
         if st.button("➡️ 다음 문제로"):
             st.session_state.current_q += 1
@@ -158,7 +158,6 @@ else:
     ])
     st.balloons()
 
-    # ✅ 랭킹 표시
     df = pd.DataFrame(sheet.get_all_records())
     df['걸린시간'] = pd.to_numeric(df['걸린시간'], errors='coerce')
     df_best = df.sort_values(by=['점수', '걸린시간'], ascending=[False, True])
@@ -172,3 +171,31 @@ else:
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
+
+# ✅ 제작자 정보 하단 고정
+st.markdown("""
+<style>
+.footer {
+    position: fixed;
+    bottom: 10px;
+    left: 0;
+    width: 100%;
+    padding: 10px 0;
+    background-color: #f9f9f9;
+    color: #444;
+    text-align: center;
+    font-size: 14px;
+    border-top: 1px solid #e0e0e0;
+    z-index: 999;
+}
+.footer a {
+    text-decoration: none;
+    color: #007acc;
+    font-weight: bold;
+}
+</style>
+
+<div class="footer">
+    📌 Made by <strong>반포고 황수빈T</strong> | 문의: <a href="mailto:sbhath17@gmail.com">sbhath17@gmail.com</a>
+</div>
+""", unsafe_allow_html=True)
