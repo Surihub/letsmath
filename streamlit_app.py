@@ -6,19 +6,20 @@ import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 from pytz import timezone
-
-# 구글 시트 설정
-GSHEET_JSON = "mathgame-derivatives-7df3f7bd4ed3.json"
-SHEET_ID = "1M7nWyh6acRsSj6ftoNNJXt183wYyyEsoTfZRjuewrPc"
+import json
 
 @st.cache_resource
 def connect_sheet():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name(GSHEET_JSON, scope)
-    client = gspread.authorize(creds)
-    sheet = client.open_by_key(SHEET_ID).sheet1
-    return sheet
 
+    # secrets에서 JSON 문자열 불러오기
+    json_key = json.loads(st.secrets["google_sheets"]["service_account"])
+    sheet_id = st.secrets["google_sheets"]["sheet_id"]
+
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(json_key, scope)
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(sheet_id).sheet1
+    return sheet
 # 문제 정의
 basic_deriv = [
     ("\\frac{d}{dx}\\left( \\sin x \\right)", "cos x", ["cos x", "-cos x", "sin x", "-sin x"]),
