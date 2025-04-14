@@ -40,6 +40,8 @@ basic_deriv = [
         "(f(x)/g(x))'"
     ]),
 ]
+
+
 applied_deriv = [
     ("y = (3x^2 - 4x + 1)^5", "\\frac{d}{dx}[(3x^2 - 4x + 1)^5] = 5(3x^2 - 4x + 1)^4 · (6x - 4)", [
         "5(3x^2 - 4x + 1)^4 · (6x - 4)",
@@ -73,6 +75,32 @@ applied_deriv = [
     ]),
 ]
 
+
+# ✅ questions 시트에서 applied 문제 불러오기
+# def load_applied_questions():
+#     try:
+#         client = gspread.authorize(ServiceAccountCredentials.from_json_keyfile_dict(
+#             json.loads(st.secrets["google_sheets"]["service_account"]),
+#             ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+#         ))
+#         sheet_questions = client.open_by_key(st.secrets["google_sheets"]["sheet_id"]).worksheet("questions")
+#         data = sheet_questions.get_all_records()
+#         applied = []
+
+#         for row in data:
+#             question = row.get('문제')
+#             options = [opt.strip() for opt in row.get('선지', '').split(";") if opt.strip()]
+#             if question and options:
+#                 correct = options[0]
+#                 applied.append((question, correct, options))
+#         return applied
+#     except Exception as e:
+#         st.warning("⚠️ 'questions' 시트에서 문제를 불러오지 못했습니다. 기본 문제를 사용합니다.")
+#         return []
+
+
+
+
 # ✅ 세션 초기화
 defaults = {
     "nickname": None,
@@ -95,17 +123,17 @@ def show_random_image():
     images = [f for f in os.listdir(image_folder) if f.lower().endswith(supported_formats)]
     if images:
         selected = random.choice(images)
-        st.image(os.path.join(image_folder, selected), use_container_width=True)
+        st.image(os.path.join(image_folder, selected), width=400)
 
 # ✅ 대문 페이지 (닉네임 입력 + 게임 시작)
 if not st.session_state.nickname or not st.session_state.game_started:
     st.title("🧠 미분법 공식 암기 게임")
     st.info("문제를 풀면서 미분 공식을 재미있게 익혀보세요!")
 
-    show_random_image()
 
     st.subheader("👤 닉네임 입력")
     nickname = st.text_input("닉네임을 입력하세요 (최대 3자)", max_chars=3)
+    show_random_image()
 
     if nickname:
         if len(nickname) > 3:
@@ -141,7 +169,7 @@ with st.sidebar:
 if st.session_state.questions is None:
     all_questions = basic_deriv + applied_deriv
     random.shuffle(all_questions)
-    st.session_state.questions = random.sample(all_questions, 5)
+    st.session_state.questions = random.sample(all_questions, 10)
 
 
 questions = st.session_state.questions
