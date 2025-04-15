@@ -10,6 +10,13 @@ import json
 import os
 import numpy as np
 
+st.set_page_config(
+    page_title="미분 공식 외우기",
+    page_icon="🧠",
+    layout="centered"
+)
+
+
 # ✅ 구글 시트 연결
 @st.cache_resource
 def connect_sheet():
@@ -136,6 +143,7 @@ def load_questions_from_sheet():
 # ✅ 세션 초기화
 defaults = {
     "nickname": None,
+    "stid": None,
     "game_started": False,
     "current_q": 0,
     "score": 0,
@@ -149,13 +157,14 @@ for k, v in defaults.items():
         st.session_state[k] = v
 
 # ✅ 랜덤 짤 출력
+@st.cache_resource()
 def show_random_image():
     image_folder = ".streamlit/images"
     supported_formats = (".jpg", ".jpeg", ".png", ".gif")
     images = [f for f in os.listdir(image_folder) if f.lower().endswith(supported_formats)]
     if images:
         selected = random.choice(images)
-        st.image(os.path.join(image_folder, selected), width=400)
+        st.image(os.path.join(image_folder, selected), width=400, caption="미분 짤.jpg")
 
 # ✅ 대문 페이지 (닉네임 입력 + 게임 시작)
 if not st.session_state.nickname or not st.session_state.game_started:
@@ -164,7 +173,14 @@ if not st.session_state.nickname or not st.session_state.game_started:
 
 
     st.subheader("👤 닉네임 입력")
-    nickname = st.text_input("닉네임을 입력하세요 (최대 3자)", max_chars=3)
+    st.warning("학번과 닉네임을 입력해주세요. (학번은 공개되지 않아요. 닉네임은 공개됩니다.)")
+    
+    id_col1, id_col2 = st.columns(2)
+    with id_col1:
+        stid = st.text_input("학번을 입력하세요. ex. 30129", )
+    with id_col2:
+        nickname = st.text_input("닉네임을 입력하세요. (최대 3자)", max_chars=3)
+
     show_random_image()
 
     if nickname:
@@ -173,6 +189,7 @@ if not st.session_state.nickname or not st.session_state.game_started:
         else:
             if st.button("🚀 게임 시작하기"):
                 st.session_state.nickname = nickname
+                st.session_state.stid = stid
                 st.session_state.game_started = True
 
                 # 준비 메세지 출력
@@ -265,9 +282,10 @@ if st.session_state.current_q < len(questions):
 
         if selected == q[1]:
             st.session_state.score += 1
-            st.success("✅ 정답입니다!")
+            st.success("#### ✅ 정답입니다!")
         else:
-            st.error(f"❌ 틀렸습니다. 정답은: **${q[1]}**")
+            # st.error(f"❌ 틀렸습니다. 정답은: **${q[1]}**")
+            st.error(f"#### ❌ 틀렸습니다. {q[-1]}")
 
     if st.session_state.answered:
         if st.button("➡️ 다음 문제로"):
@@ -278,10 +296,6 @@ if st.session_state.current_q < len(questions):
 # ✅ 게임 종료
 else:
     total_elapsed = sum(st.session_state.times)
-    st.subheader(f"{st.session_state.nickname}님의 풀이 결과")
-    st.success(f"🎉 게임 완료! 총 점수: {st.session_state.score} / {len(questions)}")
-    st.info(f"🕒 총 소요 시간: {total_elapsed:.2f}초 (풀이 시간만 측정)")
-
     # ✅ 중복 기록 방지
     if 'score_saved' not in st.session_state:
         st.session_state.score_saved = False
@@ -292,7 +306,8 @@ else:
             st.session_state.nickname,
             st.session_state.score,
             round(total_elapsed, 2),
-            now
+            now,
+            st.session_state.stid,
         ])
         st.session_state.score_saved = True  # 기록 완료 표시
         st.balloons()
@@ -321,6 +336,11 @@ else:
         })
 
     st.markdown("## 🏆 랭킹 Top 10")
+    st.subheader(f"{st.session_state.nickname}님의 풀이 결과")
+    st.success(f"### 🎉 게임 완료! 총 점수: {st.session_state.score} / {len(questions)}")
+    st.info(f"### 🕒 총 소요 시간: {total_elapsed:.2f}초 (풀이 시간만 측정)")
+
+
     st.markdown("**상위 랭커들을 소개합니다!**")
     st.table(pd.DataFrame(styled_ranking))
     st.success(f"현재까지 {df['닉네임'].nunique()}명이 총 {len(df['닉네임'])}회 도전했어요. 평균 시도 횟수: {np.round(len(df['닉네임'])/df['닉네임'].nunique(),2)}")
